@@ -9,126 +9,42 @@ environment. By the end, you will have a functional |cp| deployment that you can
 This tutorial builds a single node Docker environment using Docker client. You will configure Kafka and |zk| to store data locally in their
 Docker containers.
 
-Prerequisites
-    - .. include:: ../includes/docker-version.rst
+.. include:: includes/start-download.rst
 
-    - `curl <https://curl.haxx.se/>`_
+#.  Clone the Docker images repository, navigate to the examples directory, and checkout the |release| branch.
 
+    .. codewithvars:: bash
 
-=====================================
-Step 1: Setup Your Docker Environment
-=====================================
+        git clone https://github.com/confluentinc/cp-docker-images
+        cd cp-docker-images/examples/kafka-single-node/
+        git checkout |release_post_branch|
 
-.. include:: ../includes/docker-machine.rst
+#.  Start the services by using the example Docker Compose file. It will start up 1 Kafka cluster and a |zk| cluster. Start
+    |cp| specifying two options: (``-d``) to run in detached mode and (``--build``) to build.
 
-Create a Docker Network
------------------------
+    ::
 
-Create the Docker network that is used to run the Confluent containers.
+        docker-compose up -d --build
 
-.. important:: A Docker network is required to enable DNS resolution across your containers. The default Docker network does not have DNS enabled.
+    This starts the |cp| with separate containers for all |cp| components. Your output should resemble the following:
 
-.. codewithvars:: console
+    ::
 
-  $ docker network create confluent
+        Creating network "kafka-single-node_default" with the default driver
+        Creating kafka-single-node_zookeeper_1_2f7defa10331 ... done
+        Creating kafka-single-node_kafka_1_43073e0c25a3     ... done
 
-
-=================================
-Step 2. Start the |cp| Components
-=================================
-
-Start |zk|
-----------
-
-#. Start |zk| and keep this service running.
-
-   .. codewithvars:: console
-
-    $ docker run -d \
-        --net=confluent \
-        --name=zookeeper \
-        -e ZOOKEEPER_CLIENT_PORT=2181 \
-        confluentinc/cp-zookeeper:|release|
-
-   This command instructs Docker to launch an instance of the :litwithvars:`confluentinc/cp-zookeeper:|release|` container and name it ``zookeeper``.
-   Also, the Docker network ``confluent`` and the required ZooKeeper parameter ``ZOOKEEPER_CLIENT_PORT`` are specified.
-   For a full list of the available configuration options and more details on passing environment variables into Docker
-   containers, see the :ref:`configuration reference docs <config_reference>`.
-
-#. Optional: Check the Docker logs to confirm that the container has booted up successfully and started the |zk| service.
-
-   .. codewithvars:: console
-
-    $ docker logs zookeeper
-
-   With this command, you're referencing the container name that you want to see the logs for.  To list all containers
-   (running or failed), you can always run ``docker ps -a``.  This is especially useful when running in detached mode.
-
-   When you output the logs for |zk|, you should see the following message at the end of the log output:
-
-   ::
-
-    [2016-07-24 05:15:35,453] INFO binding to port 0.0.0.0/0.0.0.0:2181 (org.apache.zookeeper.server.NIOServerCnxnFactory)
-
-   Note that the message shows the |zk| service listening at the port you passed in as ``ZOOKEEPER_CLIENT_PORT`` above.
-
-   If the service is not running, the log messages should provide details to help you identify the problem.  A common
-   error is:
-
-   * Insufficient resources.  In rare occasions, you may see memory allocation or other low-level failures at startup. This
-     will only happen if you dramatically overload the capacity of your Docker host.
-
-Start Kafka
------------
-
-#. Start Kafka with this command.
-
-   .. codewithvars:: console
-
-      $ docker run -d \
-          --net=confluent \
-          --name=kafka \
-          -e KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181 \
-          -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092 \
-          -e KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1 \
-          confluentinc/cp-kafka:|release|
-
-   The ``KAFKA_ADVERTISED_LISTENERS`` variable is set to ``kafka:9092``.  This will make Kafka accessible to other
-   containers by advertising it's location on the Docker network. The same |zk| port is specified here as the
-   previous container.
-
-   The ``KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR`` is set to ``1`` for a single-node cluster.  If you have three or more
-   nodes, you do not need to change this from the default.
-
-#. Optional: Check the logs to see the broker has booted up successfully:
-
-   .. codewithvars:: console
-
-    $ docker logs kafka
-
-   You should see the following at the end of the log output:
-
-   ::
-
-    ....
-    [2016-07-15 23:31:00,295] INFO [Kafka Server 1], started (kafka.server.KafkaServer)
-    ...
-    ...
-    [2016-07-15 23:31:00,349] INFO [Controller 1]: New broker startup callback for 1 (kafka.controller.KafkaController)
-    [2016-07-15 23:31:00,350] INFO [Controller-1-to-broker-1-send-thread], Starting  (kafka.controller.RequestSendThread)
-    ...
 
 .. _test_drive:
 
-=======================================
-Step 3. Create a Topic and Produce Data
-=======================================
+Step 2. Create a Topic and Produce Data
+---------------------------------------
 
 #. Create a topic.  You'll name it ``foo`` and keep things simple by just giving it one partition and only one replica.
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm confluentinc/cp-kafka:|release| \
       kafka-topics --create --topic foo --partitions 1 --replication-factor 1 \
@@ -144,7 +60,7 @@ Step 3. Create a Topic and Produce Data
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm \
       confluentinc/cp-kafka:|release| \
@@ -161,7 +77,7 @@ Step 3. Create a Topic and Produce Data
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm \
       confluentinc/cp-kafka:|release| \
@@ -178,7 +94,7 @@ Step 3. Create a Topic and Produce Data
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm \
       confluentinc/cp-kafka:|release| \
@@ -210,7 +126,7 @@ to write any code.
 
    .. codewithvars:: console
 
-    $ docker run -d \
+      docker run -d \
       --net=confluent \
       --name=schema-registry \
       -e SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper:2181 \
@@ -222,14 +138,14 @@ to write any code.
 
    .. codewithvars:: console
 
-    $ docker logs schema-registry
+      docker logs schema-registry
 
 #. Launch a second |sr| container in interactive mode (``-it``) and then execute the ``kafka-avro-console-producer`` utility
    from there. This publishes data to a new topic that will leverage the |sr|.
 
    .. codewithvars:: console
 
-    $ docker run -it --net=confluent --rm confluentinc/cp-schema-registry:|release| bash
+      docker run -it --net=confluent --rm confluentinc/cp-schema-registry:|release| bash
 
 
    #. Run the Kafka console roducer against your Kafka cluster, instruct it to write to the topic ``bar``, read each line
@@ -272,7 +188,7 @@ that you launched in the previous step.
 
    .. codewithvars:: console
 
-    $ docker run -d \
+      docker run -d \
       --net=confluent \
       --name=kafka-rest \
       -e KAFKA_REST_ZOOKEEPER_CONNECT=zookeeper:2181 \
@@ -289,7 +205,7 @@ that you launched in the previous step.
 
    .. codewithvars:: console
 
-    $ docker run -it --net=confluent --rm confluentinc/cp-schema-registry:|release| bash
+      docker run -it --net=confluent --rm confluentinc/cp-schema-registry:|release| bash
 
    #. Create a consumer instance.
 
@@ -336,7 +252,7 @@ Stream Monitoring
 
    .. codewithvars:: console
 
-    $ docker run -d \
+      docker run -d \
       --name=control-center \
       --net=confluent \
       --ulimit nofile=16384:16384 \
@@ -357,7 +273,7 @@ Stream Monitoring
 
    .. codewithvars:: console
 
-    $ docker logs control-center | grep Started
+      docker logs control-center | grep Started
 
    You should see the following:
 
@@ -373,7 +289,7 @@ Stream Monitoring
 
    .. codewithvars:: console
 
-    $ docker-machine ip confluent
+      docker-machine ip confluent
 
    .. tip:: If your Docker daemon is running on a remote machine (such as an AWS EC2 instance), you must allow TCP access
             to that instance on port 9021. This is done in AWS by adding a "Custom TCP Rule" to the instance's security
@@ -391,7 +307,7 @@ Stream Monitoring
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm confluentinc/cp-kafka:|release| \
       kafka-topics --create --topic c3-test --partitions 1 --replication-factor 1 --if-not-exists --zookeeper zookeeper:2181
@@ -400,7 +316,7 @@ Stream Monitoring
 
    .. codewithvars:: console
 
-    $ while true;
+      while true;
     do
       docker run \
         --net=confluent \
@@ -426,8 +342,8 @@ Stream Monitoring
 
    .. codewithvars:: console
 
-    $ OFFSET=0
-    $ while true;
+      OFFSET=0
+      while true;
     do
       docker run \
         --net=confluent \
@@ -521,7 +437,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm \
       confluentinc/cp-kafka:|release| \
@@ -532,7 +448,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: bash
 
-    $ docker run \
+      docker run \
       --net=confluent \
       --rm \
       confluentinc/cp-kafka:|release| \
@@ -543,7 +459,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-    $ docker run \
+      docker run \
        --net=confluent \
        --rm \
        confluentinc/cp-kafka:|release| \
@@ -554,7 +470,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-      $ docker run -d \
+        docker run -d \
         --name=kafka-connect \
         --net=confluent \
         -e CONNECT_PRODUCER_INTERCEPTOR_CLASSES=io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor \
@@ -584,7 +500,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-        $ docker logs kafka-connect | grep started
+          docker logs kafka-connect | grep started
 
    You should see the following:
 
@@ -597,7 +513,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-        $ docker exec kafka-connect mkdir -p /tmp/quickstart/file
+          docker exec kafka-connect mkdir -p /tmp/quickstart/file
 
 #. Create a connector for reading a file from disk.
 
@@ -605,13 +521,13 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
       .. codewithvars:: console
 
-        $ docker exec kafka-connect sh -c 'seq 1000 > /tmp/quickstart/file/input.txt'
+          docker exec kafka-connect sh -c 'seq 1000 > /tmp/quickstart/file/input.txt'
 
    #. Create the connector using the Kafka Connect REST API.
 
       .. codewithvars:: console
 
-        $ docker exec kafka-connect curl -s -X POST \
+          docker exec kafka-connect curl -s -X POST \
           -H "Content-Type: application/json" \
           --data '{"name": "quickstart-file-source", "config": {"connector.class":"org.apache.kafka.connect.file.FileStreamSourceConnector", "tasks.max":"1", "topic":"quickstart-data", "file": "/tmp/quickstart/file/input.txt"}}' \
           http://kafka-connect:8082/connectors
@@ -626,7 +542,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
       .. codewithvars:: console
 
-            $ docker exec kafka-connect curl -s -X GET http://kafka-connect:8082/connectors/quickstart-file-source/status
+              docker exec kafka-connect curl -s -X GET http://kafka-connect:8082/connectors/quickstart-file-source/status
 
       You should see the following output including the ``state`` of the connector as ``RUNNING``:
 
@@ -640,7 +556,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
       .. codewithvars:: console
 
-        $ docker run \
+          docker run \
           --net=confluent \
           --rm \
           confluentinc/cp-kafka:|release| \
@@ -671,7 +587,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-    $ docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
+      docker exec kafka-connect curl -X POST -H "Content-Type: application/json" \
         --data '{"name": "quickstart-file-sink", \
         "config": {"connector.class":"org.apache.kafka.connect.file.FileStreamSinkConnector", "tasks.max":"1", \
         "topics":"quickstart-data", "file": "/tmp/quickstart/file/output.txt"}}' \
@@ -688,7 +604,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-    $ docker exec kafka-connect curl -s -X GET http://kafka-connect:8082/connectors/quickstart-file-sink/status
+      docker exec kafka-connect curl -s -X GET http://kafka-connect:8082/connectors/quickstart-file-sink/status
 
    You should see the following:
 
@@ -700,7 +616,7 @@ topics. You will create these topics in the Kafka cluster you have running from 
 
    .. codewithvars:: console
 
-    $ docker exec kafka-connect cat /tmp/quickstart/file/output.txt
+      docker exec kafka-connect cat /tmp/quickstart/file/output.txt
 
    You should see all of the data you originally wrote to the input file:
 
@@ -752,7 +668,7 @@ documentation. This will delete all of the containers that you created in this q
 
 .. codewithvars:: bash
 
-   $ docker-compose down
+     docker-compose down
 
 ==========
 Next Steps
